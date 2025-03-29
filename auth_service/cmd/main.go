@@ -1,6 +1,7 @@
 package main
 
 import (
+	"auth_service/configs"
 	"auth_service/internal/api"
 	"auth_service/internal/repository"
 	"auth_service/internal/server"
@@ -18,19 +19,36 @@ import (
 
 func main() {
 
-	configPath := "../configs/config.yml"
-	repository.LoadConfig(configPath)
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+	err := viper.ReadInConfig()
+	if err != nil {
+		log.Fatalf("Error reading config file: %s", err)
+	}
 
-	dbInterface := repository.DBObject{}
-	db, err := repository.ConnectToDb(dbInterface)
+	var config configs.Config
+	err = viper.Unmarshal(&config)
+	if err != nil {
+		log.Fatalf("Unable to decode into struct, %v", err)
+	}
+
+	db, dbInterface, err := repository.ConnectToDb(config)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 		return
 	}
 	defer dbInterface.Close(db)
+	rdb, redisInterface, err := repository.ConnectToRedis(config)
+	if err != nil {
+		log.Fatalf("Failed to connect to Redis: %v", err)
+		return
+	}
+	defer redisInterface.Close(rdb)
 
-	repos := repository.NewAuthRepository(db)
-	service := service.NewService(repos)
+	reposdb := repository.NewAuthRepository(db)
+	reposredis := repository.NewRedisRepository(rdb)
+	service := service.NewService(reposdb, reposredis)
 	handlers := api.NewHandler(service)
 	srv := &server.Server{}
 
