@@ -8,3 +8,8 @@ database:
   password: my_password
   name: fc2
   sslmode: disable
+redis:  
+  host: localhost   
+  port: 6379        
+  password: ""      
+  db: 0             
