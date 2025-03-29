@@ -38,13 +38,11 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	https_cert := viper.GetString("server.https_certificate")
-	https_key := viper.GetString("server.https_key")
 	fmt.Printf("Starting server on port: %s\n", port)
 	serverError := make(chan error, 1)
 	go func() {
 
-		if err := srv.Run(https_cert, https_key, port, handlers.InitRoutes()); err != nil {
+		if err := srv.Run(port, handlers.InitRoutes()); err != nil {
 			serverError <- fmt.Errorf("server run failed: %w", err)
 			return
 		}
