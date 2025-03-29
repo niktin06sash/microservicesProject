@@ -1,5 +1,7 @@
 server:
   port: "8081"
+  https_certificate: "../certifate.pem"
+  https_key: "../key.pem"
 database:
   driver: postgres
   host: localhost
