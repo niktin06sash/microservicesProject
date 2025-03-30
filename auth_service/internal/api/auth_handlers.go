@@ -4,7 +4,6 @@ import (
 	"auth_service/internal/erro"
 	"auth_service/internal/model"
 	"auth_service/internal/service"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +13,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// Сделай транзакцию и объедини функции
 func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	maparesponse := make(map[string]string)
 	if r.Method != http.MethodPost {
@@ -55,8 +55,8 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	sessionresponse := h.services.GenerateSession(context.TODO(), regresponse.UserId)
-	AddCookie(w, sessionID, time)
+	//sessionresponse := h.services.GenerateSession(context.TODO(), regresponse.UserId)
+	//AddCookie(w, sessionID, time)
 	w.Header().Set("Content-Type", jsonResponseType)
 	w.WriteHeader(http.StatusOK)
 	sucresponse := HTTPResponse{
@@ -70,6 +70,8 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprint(w, string(jsonResponse))
 }
+
+// Сделай транзакцию и объедини функции
 func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	maparesponse := make(map[string]string)
 	if r.Method != http.MethodPost {

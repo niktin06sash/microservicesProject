@@ -6,7 +6,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -53,7 +52,6 @@ func (repoap *AuthPostgres) GetUser(ctx context.Context, useremail, userpassword
 
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(userpassword))
 	if err != nil {
-		log.Printf("Error comparing password: %v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword}
 	}
 

@@ -1,10 +1,10 @@
 package service
 
 import (
+	"auth_service/internal/erro"
 	"auth_service/internal/model"
 	"auth_service/internal/repository"
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -40,7 +40,7 @@ func (s *SessionService) GenerateSession(ctx context.Context, userID uuid.UUID) 
 	redisData, ok := repoResponse.Data.(repository.RedisRepositoryResponseData)
 	if !ok {
 
-		errMap := map[string]error{"Data": fmt.Errorf("unexpected data type")}
+		errMap := map[string]error{"Data": erro.ErrorUnexpectedData}
 		return &ServiceResponse{Success: false, Errors: errMap}
 	}
 
@@ -58,7 +58,7 @@ func (s *SessionService) Authorizate(ctx context.Context, sessionID string) *Ser
 	redisData, ok := repoResponse.Data.(repository.RedisRepositoryResponseData)
 	if !ok {
 
-		errMap := map[string]error{"Data": fmt.Errorf("unexpected data type")}
+		errMap := map[string]error{"Data": erro.ErrorUnexpectedData}
 		return &ServiceResponse{Success: false, Errors: errMap}
 	}
 

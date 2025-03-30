@@ -6,7 +6,6 @@ import (
 	"auth_service/internal/repository"
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -47,8 +46,8 @@ func (as *AuthService) Registrate(user *model.Person, ctx context.Context) *Serv
 
 	dbData, ok := response.Data.(repository.DBRepositoryResponseData)
 	if !ok {
-		log.Printf("Unexpected data type from repository: %T", response.Data)
-		errMap := map[string]error{"Data": fmt.Errorf("unexpected data type")}
+
+		errMap := map[string]error{"Data": erro.ErrorUnexpectedData}
 		return &ServiceResponse{Success: false, Errors: errMap}
 	}
 
@@ -68,8 +67,8 @@ func (as *AuthService) Authenticate(user *model.Person, ctx context.Context) *Se
 
 	dbData, ok := response.Data.(repository.DBRepositoryResponseData)
 	if !ok {
-		log.Printf("Unexpected data type from repository: %T", response.Data)
-		errMap := map[string]error{"Data": fmt.Errorf("unexpected data type")}
+
+		errMap := map[string]error{"Data": erro.ErrorUnexpectedData}
 		return &ServiceResponse{Success: false, Errors: errMap}
 	}
 

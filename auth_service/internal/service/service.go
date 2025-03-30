@@ -18,6 +18,8 @@ type SessionManager interface {
 	Authorizate(ctx context.Context, sessionID string) *ServiceResponse
 }
 
+// объединение функций для транзакции(например использовать RegisterAndLogin)
+// разделить ответ от бизнес-логики(как в репозитории)
 type Service struct {
 	UserAuthentication
 	SessionManager

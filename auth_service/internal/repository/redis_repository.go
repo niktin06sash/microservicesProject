@@ -1,10 +1,9 @@
 package repository
 
 import (
+	"auth_service/internal/erro"
 	"auth_service/internal/model"
 	"context"
-	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,14 +21,13 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 	}).Err()
 
 	if err != nil {
-		log.Printf("Redis set error: %v", err)
-		return &RepositoryResponse{Success: false, Errors: fmt.Errorf("failed to set session: %w", err)}
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorSetSession}
 	}
 
 	err = redisrepo.Client.Expire(ctx, session.SessionID, expiration).Err()
 	if err != nil {
-		log.Printf("Redis expire error: %v", err)
-		return &RepositoryResponse{Success: false, Errors: fmt.Errorf("failed to set expiration: %w", err)}
+
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorSetSession}
 	}
 
 	responseData := RedisRepositoryResponseData{
@@ -44,32 +42,31 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *RepositoryResponse {
 	result, err := redisrepo.Client.HGetAll(ctx, sessionID).Result()
 	if err != nil {
-		log.Printf("Redis get error: %v", err)
-		return &RepositoryResponse{Success: false, Errors: fmt.Errorf("failed to get session: %w", err)}
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorGetSession}
 	}
 
 	if len(result) == 0 {
-		return &RepositoryResponse{Success: false, Errors: fmt.Errorf("session not found")}
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorInvalidSessionID}
 	}
 
 	userIDString, ok := result["UserID"]
 	if !ok {
-		return &RepositoryResponse{Success: false, Errors: fmt.Errorf("UserID not found in session")}
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorGetUserIdSession}
 	}
 
 	expirationTimeString, ok := result["ExpirationTime"]
 	if !ok {
-		return &RepositoryResponse{Success: false, Errors: fmt.Errorf("ExpirationTime not found in session")}
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorGetExpirationTimeSession}
 	}
 
 	expirationTime, err := time.Parse(time.RFC3339, expirationTimeString)
 	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: fmt.Errorf("failed to parse ExpirationTime: %w", err)}
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorSessionParse}
 	}
 
 	userID, err := uuid.Parse(userIDString)
 	if err != nil {
-		return &RepositoryResponse{Success: false, Errors: fmt.Errorf("failed to parse userID: %w", err)}
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorSessionParse}
 	}
 
 	responseData := RedisRepositoryResponseData{
