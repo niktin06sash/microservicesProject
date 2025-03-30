@@ -4,19 +4,36 @@ import (
 	"auth_service/internal/model"
 	"context"
 	"database/sql"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 //go:generate mockgen -source=repository.go -destination=mocks/mock.go
-type AuthorizationRepos interface {
-	CreateUser(ctx context.Context, user *model.Person) *AuthenticationRepositoryResponse
-	GetUser(ctx context.Context, useremail, password string) *AuthenticationRepositoryResponse
+type DBAuthenticateRepos interface {
+	CreateUser(ctx context.Context, user *model.Person) *RepositoryResponse
+	GetUser(ctx context.Context, useremail, password string) *RepositoryResponse
+}
+type RedisSessionRepos interface {
+	SetSession(ctx context.Context, sessionID string, userID string, expiration time.Duration) *RepositoryResponse
+	GetSession(ctx context.Context, sessionID string) *RepositoryResponse
+	//DeleteSession(ctx context.Context, sessionID string) error
 }
 type Repository struct {
-	AuthorizationRepos
+	DBAuthenticateRepos
+	RedisSessionRepos
+}
+type RepositoryResponse struct {
+	Success bool
+	UserId  uuid.UUID
+	Errors  error
+	Time    *time.Duration
 }
 
-func NewAuthRepository(db *sql.DB) *Repository {
+func NewRepository(db *sql.DB, client *redis.Client) *Repository {
 	return &Repository{
-		AuthorizationRepos: NewAuthPostgres(db),
+		DBAuthenticateRepos: NewAuthPostgres(db),
+		RedisSessionRepos:   NewAuthRedis(client),
 	}
 }

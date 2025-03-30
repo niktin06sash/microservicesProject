@@ -4,6 +4,7 @@ import (
 	"auth_service/internal/erro"
 	"auth_service/internal/model"
 	"auth_service/internal/service"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -44,9 +45,9 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	response := h.services.Registrate(&newperk, r.Context())
-	if !response.Success {
-		stringMap := convertErrorToString(response)
+	regresponse := h.services.Registrate(&newperk, r.Context())
+	if !regresponse.Success {
+		stringMap := convertErrorToString(regresponse)
 
 		jsonResponse := BadResponse(w, stringMap)
 		if jsonResponse != nil {
@@ -54,13 +55,13 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	sessionID, time := h.services.GenerateSession(newperk.Id)
+	sessionresponse := h.services.GenerateSession(context.TODO(), regresponse.UserId)
 	AddCookie(w, sessionID, time)
 	w.Header().Set("Content-Type", jsonResponseType)
 	w.WriteHeader(http.StatusOK)
 	sucresponse := HTTPResponse{
 		Success: true,
-		UserID:  response.UserId,
+		UserID:  regresponse.UserId,
 	}
 	jsonResponse, err := json.Marshal(sucresponse)
 	if err != nil {
@@ -108,7 +109,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	sessionID, time := h.services.GenerateSession(newperk.Id)
+	sessionID, time, err := h.services.GenerateSession(newperk.Id)
 	AddCookie(w, sessionID, time)
 	w.Header().Set("Content-Type", jsonResponseType)
 	w.WriteHeader(http.StatusOK)
@@ -135,7 +136,7 @@ func (h *Handler) Authorization(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	response := h.services.Authorizate(sessionID)
+	response, err := h.services.Authorizate(sessionID)
 	if !response.Success {
 		stringMap := convertErrorToString(response)
 

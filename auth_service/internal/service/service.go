@@ -10,20 +10,29 @@ import (
 )
 
 //go:generate mockgen -source=service.go -destination=mocks/mock.go
-type Authorization interface {
-	Registrate(user *model.Person, ctx context.Context) *AuthenticationServiceResponse
-	Authenticate(user *model.Person, ctx context.Context) *AuthenticationServiceResponse
-	GenerateSession(userId uuid.UUID) (string, time.Time)
-	Authorizate(sessionID string) *AuthenticationServiceResponse
-	//DeleteSession(token string) error
+type UserAuthentication interface {
+	Registrate(user *model.Person, ctx context.Context) *ServiceResponse
+	Authenticate(user *model.Person, ctx context.Context) *ServiceResponse
+}
+type SessionManager interface {
+	GenerateSession(ctx context.Context, userId uuid.UUID) *ServiceResponse
+	Authorizate(ctx context.Context, sessionID string) *ServiceResponse
 }
 type Service struct {
-	Authorization
+	UserAuthentication
+	SessionManager
+}
+type ServiceResponse struct {
+	Success    bool
+	UserId     uuid.UUID
+	Errors     map[string]error
+	Expiration *time.Duration
 }
 
 func NewService(repos *repository.Repository) *Service {
 
 	return &Service{
-		Authorization: NewAuthService(repos.AuthorizationRepos),
+		UserAuthentication: NewAuthService(repos.DBAuthenticateRepos),
+		SessionManager:     NewSessionService(repos.RedisSessionRepos),
 	}
 }
