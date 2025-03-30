@@ -46,7 +46,7 @@ func main() {
 	}
 	defer redisInterface.Close(rdb)
 
-	reposdb := repository.NewAuthRepository(db)
+	reposdb := repository.NewRepository(db, rdb)
 
 	service := service.NewService(reposdb)
 	handlers := api.NewHandler(service)

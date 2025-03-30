@@ -14,11 +14,6 @@ import (
 type AuthPostgres struct {
 	Db *sql.DB
 }
-type AuthenticationRepositoryResponse struct {
-	Success bool
-	UserId  uuid.UUID
-	Errors  error
-}
 
 func (repoap *AuthPostgres) CreateUser(ctx context.Context, user *model.Person) *AuthenticationRepositoryResponse {
 	var createdUserID uuid.UUID

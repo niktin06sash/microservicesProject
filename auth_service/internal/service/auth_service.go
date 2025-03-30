@@ -14,11 +14,11 @@ import (
 )
 
 type AuthService struct {
-	repo      repository.AuthorizationRepos
+	repo      repository.DBAuthenticateRepos
 	validator *validator.Validate
 }
 
-func NewAuthService(repo repository.AuthorizationRepos) *AuthService {
+func NewAuthService(repo repository.DBAuthenticateRepos) *AuthService {
 	validator := validator.New()
 	return &AuthService{repo: repo, validator: validator}
 }
