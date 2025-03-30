@@ -17,6 +17,7 @@ type SessionManager interface {
 	GenerateSession(ctx context.Context, userId uuid.UUID) *ServiceResponse
 	Authorizate(ctx context.Context, sessionID string) *ServiceResponse
 }
+
 type Service struct {
 	UserAuthentication
 	SessionManager

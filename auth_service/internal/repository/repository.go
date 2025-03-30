@@ -14,9 +14,12 @@ import (
 type DBAuthenticateRepos interface {
 	CreateUser(ctx context.Context, user *model.Person) *RepositoryResponse
 	GetUser(ctx context.Context, useremail, password string) *RepositoryResponse
+	BeginTx(ctx context.Context) (*sql.Tx, error)     // Добавляем метод для начала транзакции
+	RollbackTx(ctx context.Context, tx *sql.Tx) error // Add method for rollback transaction
+	CommitTx(ctx context.Context, tx *sql.Tx) error
 }
 type RedisSessionRepos interface {
-	SetSession(ctx context.Context, sessionID string, userID string, expiration time.Duration) *RepositoryResponse
+	SetSession(ctx context.Context, session model.Session, expiration time.Duration) *RepositoryResponse
 	GetSession(ctx context.Context, sessionID string) *RepositoryResponse
 	//DeleteSession(ctx context.Context, sessionID string) error
 }
@@ -26,8 +29,18 @@ type Repository struct {
 }
 type RepositoryResponse struct {
 	Success bool
-	UserId  uuid.UUID
+	Data    interface{}
 	Errors  error
+}
+
+type DBRepositoryResponseData struct {
+	UserId uuid.UUID
+}
+
+type RedisRepositoryResponseData struct {
+	SessionId      string
+	ExpirationTime time.Time
+	UserID         uuid.UUID
 }
 
 func NewRepository(db *sql.DB, client *redis.Client) *Repository {

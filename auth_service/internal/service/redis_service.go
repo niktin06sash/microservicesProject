@@ -1,9 +1,10 @@
 package service
 
 import (
+	"auth_service/internal/model"
 	"auth_service/internal/repository"
 	"context"
-	"log"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,10 +12,6 @@ import (
 
 type SessionService struct {
 	repo repository.RedisSessionRepos
-}
-type Session struct {
-	UserID    uuid.UUID
-	ExpiresAt time.Time
 }
 
 func NewSessionService(repo repository.RedisSessionRepos) *SessionService {
@@ -24,23 +21,46 @@ func (s *SessionService) GenerateSession(ctx context.Context, userID uuid.UUID) 
 	sessionID := uuid.New().String()
 	expiration := time.Now().Add(time.Hour * 24)
 
-	duration := time.Until(expiration)
-
-	repoResponse := s.repo.SetSession(ctx, sessionID, userID.String(), duration)
-	if !repoResponse.Success {
-		log.Printf("Ошибка при сохранении сессии в Redis: %v", repoResponse.Errors)
-		return &ServiceResponse{}
+	session := model.Session{
+		SessionID:      sessionID,
+		UserID:         userID,
+		ExpirationTime: expiration,
 	}
 
-	return &ServiceResponse{}
+	duration := time.Until(expiration)
+
+	repoResponse := s.repo.SetSession(ctx, session, duration)
+
+	if !repoResponse.Success {
+
+		errMap := map[string]error{"Redis": repoResponse.Errors}
+		return &ServiceResponse{Success: false, Errors: errMap}
+	}
+
+	redisData, ok := repoResponse.Data.(repository.RedisRepositoryResponseData)
+	if !ok {
+
+		errMap := map[string]error{"Data": fmt.Errorf("unexpected data type")}
+		return &ServiceResponse{Success: false, Errors: errMap}
+	}
+
+	return &ServiceResponse{Success: true, UserId: redisData.UserID}
 }
 
 func (s *SessionService) Authorizate(ctx context.Context, sessionID string) *ServiceResponse {
 	repoResponse := s.repo.GetSession(ctx, sessionID)
 	if !repoResponse.Success {
-		log.Printf("Ошибка при получении сессии из Redis: %v", repoResponse.Errors)
-		return &ServiceResponse{}
+
+		errMap := map[string]error{"Redis": repoResponse.Errors}
+		return &ServiceResponse{Success: false, Errors: errMap}
 	}
 
-	return &ServiceResponse{}
+	redisData, ok := repoResponse.Data.(repository.RedisRepositoryResponseData)
+	if !ok {
+
+		errMap := map[string]error{"Data": fmt.Errorf("unexpected data type")}
+		return &ServiceResponse{Success: false, Errors: errMap}
+	}
+
+	return &ServiceResponse{Success: true, UserId: redisData.UserID}
 }

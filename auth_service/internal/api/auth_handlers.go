@@ -109,8 +109,8 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	sessionID, time, err := h.services.GenerateSession(newperk.Id)
-	AddCookie(w, sessionID, time)
+	_ = h.services.GenerateSession(r.Context(), newperk.Id)
+	//AddCookie(w, responseredis., time)
 	w.Header().Set("Content-Type", jsonResponseType)
 	w.WriteHeader(http.StatusOK)
 	sucresponse := HTTPResponse{
@@ -136,7 +136,7 @@ func (h *Handler) Authorization(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	response, err := h.services.Authorizate(sessionID)
+	response := h.services.Authorizate(r.Context(), sessionID)
 	if !response.Success {
 		stringMap := convertErrorToString(response)
 
@@ -185,7 +185,7 @@ func AddCookie(w http.ResponseWriter, sessionID string, duration time.Time) {
 
 	http.SetCookie(w, cookie)
 }
-func convertErrorToString(mapa *service.AuthenticationServiceResponse) map[string]string {
+func convertErrorToString(mapa *service.ServiceResponse) map[string]string {
 	stringMap := make(map[string]string)
 	for key, err := range mapa.Errors {
 		if err != nil {
