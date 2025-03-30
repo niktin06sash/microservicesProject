@@ -32,7 +32,11 @@ type ServiceResponse struct {
 func NewService(repos *repository.Repository) *Service {
 
 	return &Service{
+<<<<<<< HEAD
 		UserAuthentication: NewAuthService(repos.DBAuthenticateRepos),
 		SessionManager:     NewSessionService(repos.RedisSessionRepos),
+=======
+		Authorization: NewAuthService(repos.DBAuthenticateRepos),
+>>>>>>> new_branch
 	}
 }
