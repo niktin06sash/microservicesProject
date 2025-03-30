@@ -4,7 +4,6 @@ import (
 	"auth_service/internal/model"
 	"auth_service/internal/repository"
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -23,20 +22,16 @@ type Service struct {
 	SessionManager
 }
 type ServiceResponse struct {
-	Success    bool
-	UserId     uuid.UUID
-	Errors     map[string]error
-	Expiration *time.Duration
+	Success bool
+	UserId  uuid.UUID
+	Errors  map[string]error
 }
 
 func NewService(repos *repository.Repository) *Service {
 
 	return &Service{
-<<<<<<< HEAD
+
 		UserAuthentication: NewAuthService(repos.DBAuthenticateRepos),
 		SessionManager:     NewSessionService(repos.RedisSessionRepos),
-=======
-		Authorization: NewAuthService(repos.DBAuthenticateRepos),
->>>>>>> new_branch
 	}
 }
