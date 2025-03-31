@@ -14,8 +14,8 @@ import (
 type DBAuthenticateRepos interface {
 	CreateUser(ctx context.Context, user *model.Person) *RepositoryResponse
 	GetUser(ctx context.Context, useremail, password string) *RepositoryResponse
-	BeginTx(ctx context.Context) (*sql.Tx, error)     // Добавляем метод для начала транзакции
-	RollbackTx(ctx context.Context, tx *sql.Tx) error // Add method for rollback transaction
+	BeginTx(ctx context.Context) (*sql.Tx, error)
+	RollbackTx(ctx context.Context, tx *sql.Tx) error
 	CommitTx(ctx context.Context, tx *sql.Tx) error
 }
 type RedisSessionRepos interface {
