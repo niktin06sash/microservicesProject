@@ -96,7 +96,7 @@ func (as *AuthService) RegistrateAndLogin(user *model.Person, ctx context.Contex
 	redisResponse := as.redisrepo.SetSession(ctx, session, duration)
 	if !redisResponse.Success {
 		log.Printf("Error when creating a session in Redis: %v", redisResponse.Errors)
-		registrateMap["SetSessionError"] = erro.ErrorSetSession
+		registrateMap["SetSessionError"] = redisResponse.Errors
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
 
@@ -157,7 +157,7 @@ func (as *AuthService) AuthenticateAndLogin(user *model.Person, ctx context.Cont
 
 	if !redisResponse.Success {
 		log.Printf("Error when creating a session in Redis: %v", redisResponse.Errors)
-		authenticateMap["SetSessionError"] = erro.ErrorSetSession
+		authenticateMap["SetSessionError"] = redisResponse.Errors
 		return &ServiceResponse{Success: false, Errors: authenticateMap}
 	}
 
@@ -180,7 +180,7 @@ func (as *AuthService) Authorization(ctx context.Context, sessionID string) *Ser
 	repoResponse := as.redisrepo.GetSession(ctx, sessionID)
 	if !repoResponse.Success {
 		log.Printf("Error when getting a session from Redis: %v", repoResponse.Errors)
-		authorizateMap["GetSessionError"] = erro.ErrorGetSession
+		authorizateMap["GetSessionError"] = repoResponse.Errors
 		return &ServiceResponse{Success: false, Errors: authorizateMap}
 	}
 

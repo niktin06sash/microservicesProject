@@ -81,13 +81,13 @@ func ConnectToDb(cfg configs.Config) (*sql.DB, DBInterface, error) {
 
 	db, err := dbInterface.Open(dbConfig.Driver, connectionString)
 	if err != nil {
-		log.Printf("Sql-Open error %v", err)
+
 		return nil, nil, err
 	}
 	err = dbInterface.Ping(db)
 	if err != nil {
 		dbInterface.Close(db)
-		log.Printf("Sql-Ping error %v", err)
+
 		return nil, nil, err
 	}
 	return db, dbInterface, nil
@@ -124,13 +124,13 @@ func ConnectToRedis(cfg configs.Config) (*redis.Client, RedisInterface, error) {
 
 	client, err := redisInterface.Open(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
-		log.Printf("Sql-Open error %v", err)
+		log.Printf("Redis-Open error %v", err)
 		return nil, nil, err
 	}
 	err = redisInterface.Ping(client)
 	if err != nil {
 		redisInterface.Close(client)
-		log.Printf("Sql-Ping error %v", err)
+		log.Printf("Redis-Ping error %v", err)
 		return nil, nil, err
 	}
 	return client, redisInterface, nil

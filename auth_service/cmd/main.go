@@ -11,6 +11,8 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -19,15 +21,29 @@ import (
 
 func main() {
 
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Fatalf("Error reading config file: %s", err)
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		log.Fatalf("Failed to get current file path")
 	}
 
+	configDir := filepath.Join(filepath.Dir(filename), "..", "configs")
+
+	// 2. Настраиваем Viper
+	viper.SetConfigName("config")
+	viper.SetConfigType("yml")
+	viper.AddConfigPath(configDir)
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+
+			log.Printf("Config file not found; using defaults or environment variables")
+		} else {
+			log.Fatalf("Error reading config file: %s", err)
+		}
+	}
 	var config configs.Config
+
 	err = viper.Unmarshal(&config)
 	if err != nil {
 		log.Fatalf("Unable to decode into struct, %v", err)

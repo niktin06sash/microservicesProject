@@ -25,8 +25,8 @@ func NewHandler(services *service.Service) *Handler {
 }
 func (h *Handler) InitRoutes() *mux.Router {
 	m := mux.NewRouter()
-	m.HandleFunc("/reg", h.Registration).Methods("POST")
-	m.HandleFunc("/auth", h.Authentication).Methods("POST")
+	m.HandleFunc("/reg", h.NonAuthorizedMiddleware(h.Registration)).Methods("POST")
+	m.HandleFunc("/auth", h.NonAuthorizedMiddleware(h.Authentication)).Methods("POST")
 	m.HandleFunc("/check-session", h.Authorization).Methods("GET")
 	return m
 }

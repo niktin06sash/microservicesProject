@@ -5,8 +5,10 @@ import "errors"
 var (
 	ErrorGetEnvDB                 = errors.New("DB get environment error")
 	ErrorNotPost                  = errors.New("Method is not POST")
+	ErrorNotGet                   = errors.New("Method is not GET")
 	ErrorReadAll                  = errors.New("ReadAll error")
 	ErrorUnmarshal                = errors.New("Unmarshal error")
+	ErrorMarshal                  = errors.New("Marshal error")
 	ErrorNotEmail                 = errors.New("This email format is not supported")
 	ErrorUniqueEmail              = errors.New("This email has already been registered")
 	ErrorHashPass                 = errors.New("Hash-Password error")
@@ -22,4 +24,5 @@ var (
 	ErrorUnexpectedData           = errors.New("Unexpected data type")
 	ErrorStartTransaction         = errors.New("Transaction creation error")
 	ErrorCommitTransaction        = errors.New("Transaction commit error")
+	ErrorAuthorized               = errors.New("The current session is active")
 )

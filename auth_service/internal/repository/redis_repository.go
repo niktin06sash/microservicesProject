@@ -11,8 +11,13 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type RedisClientInterface interface {
+	HSet(ctx context.Context, key string, values ...interface{}) *redis.IntCmd
+	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
+	HGetAll(ctx context.Context, key string) *redis.MapStringStringCmd
+}
 type AuthRedis struct {
-	Client *redis.Client
+	Client RedisClientInterface
 }
 
 func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Session, expiration time.Duration) *RepositoryResponse {

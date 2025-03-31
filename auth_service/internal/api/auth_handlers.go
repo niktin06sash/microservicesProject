@@ -19,7 +19,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		log.Printf("Invalid request method(expected Post but it was sent %v)", r.Method)
 		maparesponse["Method"] = erro.ErrorNotPost.Error()
-		jsonResponse := badResponse(w, maparesponse)
+		jsonResponse := badResponse(w, maparesponse, http.StatusMethodNotAllowed)
 		if jsonResponse != nil {
 			fmt.Fprint(w, string(jsonResponse))
 		}
@@ -29,7 +29,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("ReadAll Error: %v", err)
 		maparesponse["ReadAll"] = erro.ErrorReadAll.Error()
-		jsonResponse := badResponse(w, maparesponse)
+		jsonResponse := badResponse(w, maparesponse, http.StatusInternalServerError)
 		if jsonResponse != nil {
 			fmt.Fprint(w, string(jsonResponse))
 		}
@@ -40,7 +40,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Unmarshal Error: %v", err)
 		maparesponse["Unmarshal"] = erro.ErrorUnmarshal.Error()
-		jsonResponse := badResponse(w, maparesponse)
+		jsonResponse := badResponse(w, maparesponse, http.StatusInternalServerError)
 		if jsonResponse != nil {
 			fmt.Fprint(w, string(jsonResponse))
 		}
@@ -50,7 +50,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	if !regresponse.Success {
 		stringMap := convertErrorToString(regresponse)
 		log.Printf("Error during user registration: %v", regresponse.Errors)
-		jsonResponse := badResponse(w, stringMap)
+		jsonResponse := badResponse(w, stringMap, http.StatusBadRequest)
 		if jsonResponse != nil {
 			fmt.Fprint(w, string(jsonResponse))
 		}
@@ -67,7 +67,11 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 	jsonResponse, err := json.Marshal(sucresponse)
 	if err != nil {
 		log.Printf("Marshal Error: %v", err)
-		http.Error(w, erro.ErrorInternalServer.Error(), http.StatusInternalServerError)
+		maparesponse["Marshal"] = erro.ErrorMarshal.Error()
+		jsonResponse := badResponse(w, maparesponse, http.StatusInternalServerError)
+		if jsonResponse != nil {
+			fmt.Fprint(w, string(jsonResponse))
+		}
 		return
 	}
 	log.Printf("Person with id: %v has successfully registered", regresponse.UserId)
@@ -79,7 +83,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		log.Printf("Invalid request method(expected Post but it was sent %v)", r.Method)
 		maparesponse["Method"] = erro.ErrorNotPost.Error()
-		jsonResponse := badResponse(w, maparesponse)
+		jsonResponse := badResponse(w, maparesponse, http.StatusMethodNotAllowed)
 		if jsonResponse != nil {
 			fmt.Fprint(w, string(jsonResponse))
 		}
@@ -89,7 +93,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("ReadAll Error: %v", err)
 		maparesponse["ReadAll"] = erro.ErrorReadAll.Error()
-		jsonResponse := badResponse(w, maparesponse)
+		jsonResponse := badResponse(w, maparesponse, http.StatusInternalServerError)
 		if jsonResponse != nil {
 			fmt.Fprint(w, string(jsonResponse))
 		}
@@ -100,7 +104,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Unmarshal Error: %v", err)
 		maparesponse["Unmarshal"] = erro.ErrorUnmarshal.Error()
-		jsonResponse := badResponse(w, maparesponse)
+		jsonResponse := badResponse(w, maparesponse, http.StatusInternalServerError)
 		if jsonResponse != nil {
 			fmt.Fprint(w, string(jsonResponse))
 		}
@@ -110,7 +114,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	if !auresponse.Success {
 		stringMap := convertErrorToString(auresponse)
 		log.Printf("Error during user authentication: %v", auresponse.Errors)
-		jsonResponse := badResponse(w, stringMap)
+		jsonResponse := badResponse(w, stringMap, http.StatusBadRequest)
 		if jsonResponse != nil {
 			fmt.Fprint(w, string(jsonResponse))
 		}
@@ -127,7 +131,11 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 	jsonResponse, err := json.Marshal(sucresponse)
 	if err != nil {
 		log.Printf("Marshal Error: %v", err)
-		http.Error(w, erro.ErrorInternalServer.Error(), http.StatusInternalServerError)
+		maparesponse["Marshal"] = erro.ErrorMarshal.Error()
+		jsonResponse := badResponse(w, maparesponse, http.StatusInternalServerError)
+		if jsonResponse != nil {
+			fmt.Fprint(w, string(jsonResponse))
+		}
 		return
 	}
 	log.Printf("Person with id: %v has successfully authenticated", auresponse.UserId)
@@ -136,21 +144,36 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Handler) Authorization(w http.ResponseWriter, r *http.Request) {
 	maparesponse := make(map[string]string)
-	sessionID := r.URL.Query().Get("session_id")
-	if sessionID == "" {
-		log.Println("The person's session was not found")
-		maparesponse["SessionId"] = erro.ErrorInvalidSessionID.Error()
-		jsonResponse := badResponse(w, maparesponse)
+	if r.Method != http.MethodGet {
+		log.Printf("Invalid request method(expected Get but it was sent %v)", r.Method)
+		maparesponse["Method"] = erro.ErrorNotGet.Error()
+		jsonResponse := badResponse(w, maparesponse, http.StatusMethodNotAllowed)
 		if jsonResponse != nil {
 			fmt.Fprint(w, string(jsonResponse))
 		}
 		return
 	}
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		log.Println("The person's session was not found")
+		if err == http.ErrNoCookie {
+			maparesponse["SessionId"] = erro.ErrorInvalidSessionID.Error()
+		} else {
+			log.Printf("Error reading cookie: %v", err)
+			maparesponse["SessionId"] = erro.ErrorInternalServer.Error()
+		}
+		jsonResponse := badResponse(w, maparesponse, http.StatusUnauthorized)
+		if jsonResponse != nil {
+			fmt.Fprint(w, string(jsonResponse))
+		}
+		return
+	}
+	sessionID := cookie.Value
 	response := h.services.Authorization(r.Context(), sessionID)
 	if !response.Success {
 		stringMap := convertErrorToString(response)
 
-		jsonResponse := badResponse(w, stringMap)
+		jsonResponse := badResponse(w, stringMap, http.StatusUnauthorized)
 		if jsonResponse != nil {
 			fmt.Fprint(w, string(jsonResponse))
 		}
@@ -162,15 +185,20 @@ func (h *Handler) Authorization(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse, err := json.Marshal(sucresponse)
 	if err != nil {
-		http.Error(w, erro.ErrorInternalServer.Error(), http.StatusInternalServerError)
+		log.Printf("Marshal Error: %v", err)
+		maparesponse["Marshal"] = erro.ErrorMarshal.Error()
+		jsonResponse := badResponse(w, maparesponse, http.StatusInternalServerError)
+		if jsonResponse != nil {
+			fmt.Fprint(w, string(jsonResponse))
+		}
 		return
 	}
 	log.Printf("Person with id: %v has successfully authorizated", response.UserId)
 	fmt.Fprint(w, string(jsonResponse))
 }
-func badResponse(w http.ResponseWriter, vc map[string]string) []byte {
+func badResponse(w http.ResponseWriter, vc map[string]string, code int) []byte {
 	w.Header().Set("Content-Type", jsonResponseType)
-	w.WriteHeader(http.StatusMethodNotAllowed)
+	w.WriteHeader(code)
 	response := HTTPResponse{
 		Success: false,
 		Errors:  vc,

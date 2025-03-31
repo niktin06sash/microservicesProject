@@ -15,220 +15,211 @@ import (
 )
 
 func TestAuthPostgres_CreateUser(t *testing.T) {
-	t.Run("Successful CreateUser", func(t *testing.T) {
-		db, mock, err := sqlmock.New()
-		if err != nil {
-			t.Fatalf("Failed to create sqlmock: %v", err)
-		}
-		defer db.Close()
+	type testCase struct {
+		name            string
+		user            *model.Person
+		mockSetup       func(mock sqlmock.Sqlmock, user *model.Person)
+		expectedSuccess bool
+		expectedError   error
+		checkData       func(t *testing.T, data interface{}, user *model.Person)
+	}
 
-		repo := NewAuthPostgres(db)
+	user := &model.Person{
+		Id:       uuid.New(),
+		Name:     "testuser",
+		Email:    "test@example.com",
+		Password: "password",
+	}
 
-		user := &model.Person{
-			Id:       uuid.New(),
-			Name:     "testuser",
-			Email:    "test@example.com",
-			Password: "password",
-		}
+	testCases := []testCase{
+		{
+			name: "Successful CreateUser",
+			user: user,
+			mockSetup: func(mock sqlmock.Sqlmock, user *model.Person) {
+				mock.ExpectQuery("INSERT INTO UserZ").
+					WithArgs(user.Id, user.Name, user.Email, user.Password).
+					WillReturnRows(sqlmock.NewRows([]string{"userid"}).AddRow(user.Id))
+			},
+			expectedSuccess: true,
+			expectedError:   nil,
+			checkData: func(t *testing.T, data interface{}, user *model.Person) {
+				assert.NotNil(t, data, "Data должен быть не nil")
+				dataCasted, ok := data.(DBRepositoryResponseData)
+				assert.True(t, ok, "Data должен быть типа DBRepositoryResponseData")
+				assert.Equal(t, user.Id, dataCasted.UserId, "UserId должен совпадать")
+			},
+		},
+		{
+			name: "Duplicate Email",
+			user: user,
+			mockSetup: func(mock sqlmock.Sqlmock, user *model.Person) {
+				mock.ExpectQuery("INSERT INTO UserZ").
+					WithArgs(user.Id, user.Name, user.Email, user.Password).
+					WillReturnError(sql.ErrNoRows)
+			},
+			expectedSuccess: false,
+			expectedError:   erro.ErrorUniqueEmail,
+			checkData:       nil, // No data to check on error
+		},
+		{
+			name: "General Error",
+			user: user,
+			mockSetup: func(mock sqlmock.Sqlmock, user *model.Person) {
+				mock.ExpectQuery("INSERT INTO UserZ").
+					WithArgs(user.Id, user.Name, user.Email, user.Password).
+					WillReturnError(errors.New("general database error"))
+			},
+			expectedSuccess: false,
+			expectedError:   errors.New("general database error"),
+			checkData:       nil,
+		},
+	}
 
-		mock.ExpectQuery("INSERT INTO UserZ").
-			WithArgs(user.Id, user.Name, user.Email, user.Password).
-			WillReturnRows(sqlmock.NewRows([]string{"userid"}).AddRow(user.Id))
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			db, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("Failed to create sqlmock: %v", err)
+			}
+			defer db.Close()
 
-		response := repo.CreateUser(context.Background(), user)
+			repo := NewAuthPostgres(db)
 
-		assert.True(t, response.Success, "CreateUser должен вернуть Success = true")
-		assert.Nil(t, response.Errors, "CreateUser должен вернуть Errors = nil")
-		assert.NotNil(t, response.Data, "CreateUser должен вернуть Data != nil")
+			tc.mockSetup(mock, tc.user)
 
-		data, ok := response.Data.(DBRepositoryResponseData)
-		assert.True(t, ok, "Data должен быть типа DBRepositoryResponseData")
-		assert.Equal(t, user.Id, data.UserId, "UserId должен совпадать")
+			response := repo.CreateUser(context.Background(), tc.user)
 
-		if err := mock.ExpectationsWereMet(); err != nil {
-			t.Errorf("There were unfulfilled expectations: %s", err)
-		}
-	})
+			assert.Equal(t, tc.expectedSuccess, response.Success, "Success должен совпадать")
+			if tc.expectedError != nil {
+				assert.Error(t, response.Errors, "Должна быть ошибка")
 
-	t.Run("Duplicate Email", func(t *testing.T) {
-		db, mock, err := sqlmock.New()
-		if err != nil {
-			t.Fatalf("Failed to create sqlmock: %v", err)
-		}
-		defer db.Close()
+				if tc.name != "General Error" {
+					assert.Equal(t, tc.expectedError, response.Errors, "Тип ошибки должен совпадать")
+				} else {
+					assert.Equal(t, tc.expectedError.Error(), response.Errors.Error(), "Текст ошибки должен совпадать") // Проверяем текст ошибки
+				}
 
-		repo := NewAuthPostgres(db)
+			} else {
+				assert.NoError(t, response.Errors, "Ошибки быть не должно")
+			}
 
-		user := &model.Person{
-			Id:       uuid.New(),
-			Name:     "testuser",
-			Email:    "test@example.com",
-			Password: "password",
-		}
+			if tc.checkData != nil {
+				tc.checkData(t, response.Data, tc.user)
+			}
 
-		mock.ExpectQuery("INSERT INTO UserZ").
-			WithArgs(user.Id, user.Name, user.Email, user.Password).
-			WillReturnError(sql.ErrNoRows)
-
-		response := repo.CreateUser(context.Background(), user)
-
-		assert.False(t, response.Success, "CreateUser должен вернуть Success = false")
-		assert.NotNil(t, response.Errors, "CreateUser должен вернуть Errors != nil")
-		assert.Equal(t, erro.ErrorUniqueEmail, response.Errors, "Должна быть ошибка: Unique Email")
-
-		if err := mock.ExpectationsWereMet(); err != nil {
-			t.Errorf("There were unfulfilled expectations: %s", err)
-		}
-	})
-
-	t.Run("General Error", func(t *testing.T) {
-		db, mock, err := sqlmock.New()
-		if err != nil {
-			t.Fatalf("Failed to create sqlmock: %v", err)
-		}
-		defer db.Close()
-
-		repo := NewAuthPostgres(db)
-
-		user := &model.Person{
-			Id:       uuid.New(),
-			Name:     "testuser",
-			Email:    "test@example.com",
-			Password: "password",
-		}
-
-		mock.ExpectQuery("INSERT INTO UserZ").
-			WithArgs(user.Id, user.Name, user.Email, user.Password).
-			WillReturnError(errors.New("general database error"))
-
-		response := repo.CreateUser(context.Background(), user)
-
-		assert.False(t, response.Success, "CreateUser должен вернуть Success = false")
-		assert.NotNil(t, response.Errors, "CreateUser должен вернуть Errors != nil")
-		assert.Equal(t, "general database error", response.Errors.Error(), "Текст ошибки должен совпадать") // Проверяем текст ошибки
-
-		if err := mock.ExpectationsWereMet(); err != nil {
-			t.Errorf("There were unfulfilled expectations: %s", err)
-		}
-	})
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("There were unfulfilled expectations: %s", err)
+			}
+		})
+	}
 }
-
 func TestAuthPostgres_GetUser(t *testing.T) {
-	t.Run("Successful GetUser", func(t *testing.T) {
-		db, mock, err := sqlmock.New()
-		if err != nil {
-			t.Fatalf("Failed to create sqlmock: %v", err)
-		}
-		defer db.Close()
+	type testCase struct {
+		name            string
+		useremail       string
+		userpassword    string
+		mockSetup       func(mock sqlmock.Sqlmock, useremail string)
+		expectedSuccess bool
+		expectedError   error
+		checkData       func(t *testing.T, data interface{})
+	}
 
-		repo := NewAuthPostgres(db)
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
+	userId := uuid.New()
 
-		useremail := "test@example.com"
-		userpassword := "password"
-		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(userpassword), bcrypt.DefaultCost)
+	testCases := []testCase{
+		{
+			name:         "Successful GetUser",
+			useremail:    "test@example.com",
+			userpassword: "password",
+			mockSetup: func(mock sqlmock.Sqlmock, useremail string) {
+				mock.ExpectQuery("SELECT userid, userpassword FROM userZ WHERE useremail =").
+					WithArgs(useremail).
+					WillReturnRows(sqlmock.NewRows([]string{"userid", "userpassword"}).AddRow(userId, string(hashedPassword)))
+			},
+			expectedSuccess: true,
+			expectedError:   nil,
+			checkData: func(t *testing.T, data interface{}) {
+				dataCasted, ok := data.(DBRepositoryResponseData)
+				assert.True(t, ok, "Data должен быть типа DBRepositoryResponseData")
+				assert.Equal(t, userId, dataCasted.UserId, "UserId должен совпадать")
+			},
+		},
+		{
+			name:         "Email Not Register",
+			useremail:    "test@example.com",
+			userpassword: "password",
+			mockSetup: func(mock sqlmock.Sqlmock, useremail string) {
+				mock.ExpectQuery("SELECT userid, userpassword FROM userZ WHERE useremail =").
+					WithArgs(useremail).
+					WillReturnError(sql.ErrNoRows)
+			},
+			expectedSuccess: false,
+			expectedError:   erro.ErrorEmailNotRegister,
+			checkData:       nil,
+		},
+		{
+			name:         "Invalid Password",
+			useremail:    "test@example.com",
+			userpassword: "wrongpassword",
+			mockSetup: func(mock sqlmock.Sqlmock, useremail string) {
+				mock.ExpectQuery("SELECT userid, userpassword FROM userZ WHERE useremail =").
+					WithArgs(useremail).
+					WillReturnRows(sqlmock.NewRows([]string{"userid", "userpassword"}).AddRow(userId, string(hashedPassword)))
+			},
+			expectedSuccess: false,
+			expectedError:   erro.ErrorInvalidPassword,
+			checkData:       nil,
+		},
+		{
+			name:         "General DB Error",
+			useremail:    "test@example.com",
+			userpassword: "password",
+			mockSetup: func(mock sqlmock.Sqlmock, useremail string) {
+				mock.ExpectQuery("SELECT userid, userpassword FROM userZ WHERE useremail =").
+					WithArgs(useremail).
+					WillReturnError(errors.New("general database error"))
+			},
+			expectedSuccess: false,
+			expectedError:   errors.New("general database error"),
+			checkData:       nil,
+		},
+	}
 
-		userId := uuid.New()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			db, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("Failed to create sqlmock: %v", err)
+			}
+			defer db.Close()
 
-		mock.ExpectQuery("SELECT userid, userpassword FROM userZ WHERE useremail =").
-			WithArgs(useremail).
-			WillReturnRows(sqlmock.NewRows([]string{"userid", "userpassword"}).AddRow(userId, string(hashedPassword)))
+			repo := NewAuthPostgres(db)
 
-		response := repo.GetUser(context.Background(), useremail, userpassword)
+			tc.mockSetup(mock, tc.useremail)
 
-		assert.True(t, response.Success, "GetUser должен вернуть Success = true")
-		assert.Nil(t, response.Errors, "GetUser должен вернуть Errors = nil")
-		assert.NotNil(t, response.Data, "GetUser должен вернуть Data != nil")
+			response := repo.GetUser(context.Background(), tc.useremail, tc.userpassword)
 
-		data, ok := response.Data.(DBRepositoryResponseData)
-		assert.True(t, ok, "Data должен быть типа DBRepositoryResponseData")
-		assert.Equal(t, userId, data.UserId, "UserId должен совпадать")
+			assert.Equal(t, tc.expectedSuccess, response.Success, "Success должен совпадать")
 
-		if err := mock.ExpectationsWereMet(); err != nil {
-			t.Errorf("There were unfulfilled expectations: %s", err)
-		}
-	})
+			if tc.expectedError != nil {
+				assert.Error(t, response.Errors, "Должна быть ошибка")
+				if tc.name != "General DB Error" {
+					assert.Equal(t, tc.expectedError, response.Errors, "Тип ошибки должен совпадать")
+				} else {
+					assert.Equal(t, tc.expectedError.Error(), response.Errors.Error(), "Текст ошибки должен совпадать")
+				}
+			} else {
+				assert.NoError(t, response.Errors, "Ошибки быть не должно")
+			}
 
-	t.Run("Email Not Register", func(t *testing.T) {
-		db, mock, err := sqlmock.New()
-		if err != nil {
-			t.Fatalf("Failed to create sqlmock: %v", err)
-		}
-		defer db.Close()
+			if tc.checkData != nil {
+				tc.checkData(t, response.Data)
+			}
 
-		repo := NewAuthPostgres(db)
-
-		useremail := "test@example.com"
-		userpassword := "password"
-
-		mock.ExpectQuery("SELECT userid, userpassword FROM userZ WHERE useremail =").
-			WithArgs(useremail).
-			WillReturnError(sql.ErrNoRows)
-
-		response := repo.GetUser(context.Background(), useremail, userpassword)
-
-		assert.False(t, response.Success, "GetUser должен вернуть Success = false")
-		assert.NotNil(t, response.Errors, "GetUser должен вернуть Errors != nil")
-		assert.Equal(t, erro.ErrorEmailNotRegister, response.Errors, "Должна быть ошибка: Email Not Register")
-
-		if err := mock.ExpectationsWereMet(); err != nil {
-			t.Errorf("There were unfulfilled expectations: %s", err)
-		}
-	})
-
-	t.Run("Invalid Password", func(t *testing.T) {
-		db, mock, err := sqlmock.New()
-		if err != nil {
-			t.Fatalf("Failed to create sqlmock: %v", err)
-		}
-		defer db.Close()
-
-		repo := NewAuthPostgres(db)
-
-		useremail := "test@example.com"
-		userpassword := "wrongpassword"
-		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
-
-		userId := uuid.New()
-
-		mock.ExpectQuery("SELECT userid, userpassword FROM userZ WHERE useremail =").
-			WithArgs(useremail).
-			WillReturnRows(sqlmock.NewRows([]string{"userid", "userpassword"}).AddRow(userId, string(hashedPassword)))
-
-		response := repo.GetUser(context.Background(), useremail, userpassword)
-
-		assert.False(t, response.Success, "GetUser должен вернуть Success = false")
-		assert.NotNil(t, response.Errors, "GetUser должен вернуть Errors != nil")
-		assert.Equal(t, erro.ErrorInvalidPassword, response.Errors, "Должна быть ошибка: Invalid Password")
-
-		if err := mock.ExpectationsWereMet(); err != nil {
-			t.Errorf("There were unfulfilled expectations: %s", err)
-		}
-	})
-
-	t.Run("General DB Error", func(t *testing.T) {
-		db, mock, err := sqlmock.New()
-		if err != nil {
-			t.Fatalf("Failed to create sqlmock: %v", err)
-		}
-		defer db.Close()
-
-		repo := NewAuthPostgres(db)
-
-		useremail := "test@example.com"
-		userpassword := "password"
-
-		mock.ExpectQuery("SELECT userid, userpassword FROM userZ WHERE useremail =").
-			WithArgs(useremail).
-			WillReturnError(errors.New("general database error"))
-
-		response := repo.GetUser(context.Background(), useremail, userpassword)
-
-		assert.False(t, response.Success, "GetUser должен вернуть Success = false")
-		assert.NotNil(t, response.Errors, "GetUser должен вернуть Errors != nil")
-		assert.Equal(t, "general database error", response.Errors.Error(), "Текст ошибки должен совпадать") // Проверяем текст ошибки
-
-		if err := mock.ExpectationsWereMet(); err != nil {
-			t.Errorf("There were unfulfilled expectations: %s", err)
-		}
-	})
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("There were unfulfilled expectations: %s", err)
+			}
+		})
+	}
 }
