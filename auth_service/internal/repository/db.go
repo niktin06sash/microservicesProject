@@ -40,6 +40,7 @@ func (d *DBObject) SetConfig(cfg DBConfig) {
 func (d *DBObject) Open(driverName string, connectionString string) (*sql.DB, error) {
 	db, err := sql.Open(driverName, connectionString)
 	if err != nil {
+		log.Println("Sql-Open error %v", err)
 		return nil, err
 	}
 	return db, nil
@@ -48,6 +49,7 @@ func (d *DBObject) Open(driverName string, connectionString string) (*sql.DB, er
 func (d *DBObject) Ping(db *sql.DB) error {
 	err := db.Ping()
 	if err != nil {
+		log.Println("Sql-Ping error %v", err)
 		return err
 	}
 	return nil
@@ -56,7 +58,7 @@ func (d *DBObject) Ping(db *sql.DB) error {
 func (d *DBObject) Close(db *sql.DB) {
 	err := db.Close()
 	if err != nil {
-		log.Printf("Error closing database connection: %v", err)
+		log.Println("Sql-Close error %v", err)
 	}
 }
 
@@ -79,12 +81,14 @@ func ConnectToDb(cfg configs.Config) (*sql.DB, DBInterface, error) {
 
 	db, err := dbInterface.Open(dbConfig.Driver, connectionString)
 	if err != nil {
+		log.Println("Sql-Open error %v", err)
 		return nil, nil, err
 	}
 	err = dbInterface.Ping(db)
 	if err != nil {
 		dbInterface.Close(db)
-		return nil, nil, fmt.Errorf("error pinging database: %w", err)
+		log.Println("Sql-Ping error %v", err)
+		return nil, nil, err
 	}
 	return db, dbInterface, nil
 }
@@ -120,12 +124,14 @@ func ConnectToRedis(cfg configs.Config) (*redis.Client, RedisInterface, error) {
 
 	client, err := redisInterface.Open(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
+		log.Println("Sql-Open error %v", err)
 		return nil, nil, err
 	}
 	err = redisInterface.Ping(client)
 	if err != nil {
 		redisInterface.Close(client)
-		return nil, nil, fmt.Errorf("error pinging redis: %w", err)
+		log.Println("Sql-Ping error %v", err)
+		return nil, nil, err
 	}
 	return client, redisInterface, nil
 }

@@ -70,7 +70,7 @@ func (h *Handler) Registration(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, erro.ErrorInternalServer.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("Person with the id: %v has successfully registered", regresponse.UserId)
+	log.Printf("Person with id: %v has successfully registered", regresponse.UserId)
 	fmt.Fprint(w, string(jsonResponse))
 }
 
@@ -130,7 +130,7 @@ func (h *Handler) Authentication(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, erro.ErrorInternalServer.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("Person with the id: %v has successfully authenticated", auresponse.UserId)
+	log.Printf("Person with id: %v has successfully authenticated", auresponse.UserId)
 	fmt.Fprint(w, string(jsonResponse))
 
 }
@@ -165,7 +165,7 @@ func (h *Handler) Authorization(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, erro.ErrorInternalServer.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("Person with the id: %v has successfully authorizated", response.UserId)
+	log.Printf("Person with id: %v has successfully authorizated", response.UserId)
 	fmt.Fprint(w, string(jsonResponse))
 }
 func badResponse(w http.ResponseWriter, vc map[string]string) []byte {

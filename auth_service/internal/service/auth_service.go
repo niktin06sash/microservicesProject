@@ -5,6 +5,7 @@ import (
 	"auth_service/internal/model"
 	"auth_service/internal/repository"
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -26,26 +27,36 @@ func NewAuthService(repo repository.DBAuthenticateRepos, redis repository.RedisS
 }
 
 func (as *AuthService) RegistrateAndLogin(user *model.Person, ctx context.Context) *ServiceResponse {
+	registrateMap := make(map[string]error)
+	var err error
+	var tx *sql.Tx
+
+	defer func() {
+		if err != nil {
+			if tx != nil {
+				rbErr := as.dbrepo.RollbackTx(ctx, tx)
+				if rbErr != nil {
+					log.Printf("Error when rolling back a transaction: %v", rbErr)
+				}
+			} else {
+				log.Println("Transaction is nil, rollback not needed")
+			}
+		}
+	}()
+
 	errorvalidate := validatePerson(as, user, true)
 	if errorvalidate != nil {
 		log.Printf("Validate error %v", errorvalidate)
+
 		return &ServiceResponse{Success: false, Errors: errorvalidate}
 	}
-	registrateMap := make(map[string]error)
-	tx, err := as.dbrepo.BeginTx(ctx)
+
+	tx, err = as.dbrepo.BeginTx(ctx)
 	if err != nil {
 		log.Printf("TransactionError %v", err)
 		registrateMap["TransactionError"] = erro.ErrorStartTransaction
 		return &ServiceResponse{Success: false, Errors: registrateMap}
 	}
-	defer func() {
-		if err != nil {
-			rbErr := as.dbrepo.RollbackTx(ctx, tx)
-			if rbErr != nil {
-				log.Printf("Error when rolling back a transaction: %v", rbErr)
-			}
-		}
-	}()
 
 	hashpass, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
