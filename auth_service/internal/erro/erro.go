@@ -20,4 +20,6 @@ var (
 	ErrorGetExpirationTimeSession = errors.New("ExpirationTime not found in session")
 	ErrorSessionParse             = errors.New("Error parse session data")
 	ErrorUnexpectedData           = errors.New("Unexpected data type")
+	ErrorStartTransaction         = errors.New("Transaction creation error")
+	ErrorCommitTransaction        = errors.New("Transaction commit error")
 )

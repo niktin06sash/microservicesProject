@@ -4,37 +4,32 @@ import (
 	"auth_service/internal/model"
 	"auth_service/internal/repository"
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 //go:generate mockgen -source=service.go -destination=mocks/mock.go
 type UserAuthentication interface {
-	Registrate(user *model.Person, ctx context.Context) *ServiceResponse
-	Authenticate(user *model.Person, ctx context.Context) *ServiceResponse
+	RegistrateAndLogin(user *model.Person, ctx context.Context) *ServiceResponse
+	AuthenticateAndLogin(user *model.Person, ctx context.Context) *ServiceResponse
+	Authorization(ctx context.Context, sessionID string) *ServiceResponse
 }
-type SessionManager interface {
-	GenerateSession(ctx context.Context, userId uuid.UUID) *ServiceResponse
-	Authorizate(ctx context.Context, sessionID string) *ServiceResponse
-}
-
-// объединение функций для транзакции(например использовать RegisterAndLogin)
-// разделить ответ от бизнес-логики(как в репозитории)
 type Service struct {
 	UserAuthentication
-	SessionManager
 }
 type ServiceResponse struct {
-	Success bool
-	UserId  uuid.UUID
-	Errors  map[string]error
+	Success        bool
+	UserId         uuid.UUID
+	SessionId      string
+	ExpirationTime time.Time
+	Errors         map[string]error
 }
 
 func NewService(repos *repository.Repository) *Service {
 
 	return &Service{
 
-		UserAuthentication: NewAuthService(repos.DBAuthenticateRepos),
-		SessionManager:     NewSessionService(repos.RedisSessionRepos),
+		UserAuthentication: NewAuthService(repos.DBAuthenticateRepos, repos.RedisSessionRepos),
 	}
 }

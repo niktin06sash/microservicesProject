@@ -4,6 +4,7 @@ import (
 	"auth_service/internal/erro"
 	"auth_service/internal/model"
 	"context"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,12 +22,13 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 	}).Err()
 
 	if err != nil {
+		log.Printf("Hset error: %v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSetSession}
 	}
 
 	err = redisrepo.Client.Expire(ctx, session.SessionID, expiration).Err()
 	if err != nil {
-
+		log.Printf("Expire error: %v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSetSession}
 	}
 
@@ -35,13 +37,14 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 		ExpirationTime: session.ExpirationTime,
 		UserID:         session.UserID,
 	}
-
+	log.Println("Successful session installation!")
 	return &RepositoryResponse{Success: true, Data: responseData, Errors: nil}
 }
 
 func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *RepositoryResponse {
 	result, err := redisrepo.Client.HGetAll(ctx, sessionID).Result()
 	if err != nil {
+		log.Printf("HGetAll error: %v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorGetSession}
 	}
 
@@ -61,11 +64,13 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 
 	expirationTime, err := time.Parse(time.RFC3339, expirationTimeString)
 	if err != nil {
+		log.Printf("Time-parse error: %v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSessionParse}
 	}
 
 	userID, err := uuid.Parse(userIDString)
 	if err != nil {
+		log.Printf("UUID-parse error: %v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSessionParse}
 	}
 
@@ -74,6 +79,7 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 		ExpirationTime: expirationTime,
 		UserID:         userID,
 	}
+	log.Println("Successful session receiving!")
 	return &RepositoryResponse{Success: true, Data: responseData, Errors: nil}
 }
 

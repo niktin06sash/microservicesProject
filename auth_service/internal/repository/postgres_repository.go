@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -23,7 +24,7 @@ func (repoap *AuthPostgres) CreateUser(ctx context.Context, user *model.Person) 
 		user.Id, user.Name, user.Email, user.Password).Scan(&createdUserID)
 
 	if err != nil {
-
+		log.Printf("CreateUser Error: %v", err)
 		if errors.Is(err, sql.ErrNoRows) {
 			return &RepositoryResponse{Success: false, Errors: erro.ErrorUniqueEmail}
 		}
@@ -33,7 +34,7 @@ func (repoap *AuthPostgres) CreateUser(ctx context.Context, user *model.Person) 
 	responseData := DBRepositoryResponseData{
 		UserId: createdUserID,
 	}
-
+	log.Println("Successful create person!")
 	return &RepositoryResponse{Success: true, Data: responseData, Errors: nil}
 }
 
@@ -43,7 +44,7 @@ func (repoap *AuthPostgres) GetUser(ctx context.Context, useremail, userpassword
 	err := repoap.Db.QueryRowContext(ctx, "SELECT userid, userpassword FROM userZ WHERE useremail = $1", useremail).Scan(&userId, &hashpass)
 
 	if err != nil {
-
+		log.Printf("GetUser Error: %v", err)
 		if errors.Is(err, sql.ErrNoRows) {
 			return &RepositoryResponse{Success: false, Errors: erro.ErrorEmailNotRegister}
 		}
@@ -52,12 +53,14 @@ func (repoap *AuthPostgres) GetUser(ctx context.Context, useremail, userpassword
 
 	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(userpassword))
 	if err != nil {
+		log.Printf("CompareHashAndPassword Error: %v", err)
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword}
 	}
 
 	responseData := DBRepositoryResponseData{
 		UserId: userId,
 	}
+	log.Println("Successful get person!")
 	return &RepositoryResponse{Success: true, Data: responseData, Errors: nil}
 }
 func (r *AuthPostgres) BeginTx(ctx context.Context) (*sql.Tx, error) {
