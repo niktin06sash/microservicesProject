@@ -63,6 +63,29 @@ func (repoap *AuthPostgres) GetUser(ctx context.Context, useremail, userpassword
 	log.Println("Successful get person!")
 	return &RepositoryResponse{Success: true, Data: responseData, Errors: nil}
 }
+func (repoap *AuthPostgres) DeleteUser(ctx context.Context, userId uuid.UUID, password string) *RepositoryResponse {
+	var hashpass string
+	err := repoap.Db.QueryRowContext(ctx, "SELECT userpassword FROM userZ WHERE userid = $1", userId).Scan(&hashpass)
+
+	if err != nil {
+		log.Printf("DeleteUser Error: %v", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return &RepositoryResponse{Success: false, Errors: erro.ErrorFoundUser}
+		}
+		return &RepositoryResponse{Success: false, Errors: err}
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(hashpass), []byte(password))
+	if err != nil {
+		log.Printf("CompareHashAndPassword Error: %v", err)
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorInvalidPassword}
+	}
+	_, err = repoap.Db.ExecContext(ctx, "DELETE FROM userZ where userId = $1", userId)
+	if err != nil {
+		log.Printf("Delete Error: %v", err)
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorInternalServer}
+	}
+	return &RepositoryResponse{Success: true}
+}
 func (r *AuthPostgres) BeginTx(ctx context.Context) (*sql.Tx, error) {
 	return r.Db.BeginTx(ctx, nil)
 }

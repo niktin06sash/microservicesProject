@@ -15,6 +15,7 @@ type RedisClientInterface interface {
 	HSet(ctx context.Context, key string, values ...interface{}) *redis.IntCmd
 	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
 	HGetAll(ctx context.Context, key string) *redis.MapStringStringCmd
+	Del(ctx context.Context, key ...string) *redis.IntCmd
 }
 type AuthRedis struct {
 	Client RedisClientInterface
@@ -37,12 +38,12 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSetSession}
 	}
 
-	responseData := RedisRepositoryResponseData{
+	responseData := &RedisRepositoryResponseData{
 		SessionId:      session.SessionID,
 		ExpirationTime: session.ExpirationTime,
 		UserID:         session.UserID,
 	}
-	log.Println("Successful session installation!")
+	log.Printf("Successful session id = %v installation!", session)
 	return &RepositoryResponse{Success: true, Data: responseData, Errors: nil}
 }
 
@@ -79,13 +80,22 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSessionParse}
 	}
 
-	responseData := RedisRepositoryResponseData{
+	responseData := &RedisRepositoryResponseData{
 		SessionId:      sessionID,
 		ExpirationTime: expirationTime,
 		UserID:         userID,
 	}
-	log.Println("Successful session receiving!")
+	log.Printf("Successful session id = %v receiving!", sessionID)
 	return &RepositoryResponse{Success: true, Data: responseData, Errors: nil}
+}
+func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string) *RepositoryResponse {
+	err := redisrepo.Client.Del(ctx, sessionID).Err()
+	if err != nil {
+		log.Printf("Error deleting session %s: %v", sessionID, err)
+		return &RepositoryResponse{Success: false, Errors: erro.ErrorInternalServer}
+	}
+	log.Printf("Session %s deleted successfully", sessionID)
+	return &RepositoryResponse{Success: true}
 }
 
 /*

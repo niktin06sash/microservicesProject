@@ -11,9 +11,11 @@ import (
 
 //go:generate mockgen -source=service.go -destination=mocks/mock.go
 type UserAuthentication interface {
-	RegistrateAndLogin(user *model.Person, ctx context.Context) *ServiceResponse
-	AuthenticateAndLogin(user *model.Person, ctx context.Context) *ServiceResponse
+	RegistrateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse
+	AuthenticateAndLogin(ctx context.Context, user *model.Person) *ServiceResponse
 	Authorization(ctx context.Context, sessionID string) *ServiceResponse
+	Logout(ctx context.Context, sessionID string) *ServiceResponse
+	DeleteAccount(ctx context.Context, sessionID string, userid uuid.UUID, password string) *ServiceResponse
 }
 type Service struct {
 	UserAuthentication

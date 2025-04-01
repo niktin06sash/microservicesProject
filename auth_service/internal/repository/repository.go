@@ -14,6 +14,7 @@ import (
 type DBAuthenticateRepos interface {
 	CreateUser(ctx context.Context, user *model.Person) *RepositoryResponse
 	GetUser(ctx context.Context, useremail, password string) *RepositoryResponse
+	DeleteUser(ctx context.Context, userId uuid.UUID, password string) *RepositoryResponse
 	BeginTx(ctx context.Context) (*sql.Tx, error)
 	RollbackTx(ctx context.Context, tx *sql.Tx) error
 	CommitTx(ctx context.Context, tx *sql.Tx) error
@@ -21,7 +22,7 @@ type DBAuthenticateRepos interface {
 type RedisSessionRepos interface {
 	SetSession(ctx context.Context, session model.Session, expiration time.Duration) *RepositoryResponse
 	GetSession(ctx context.Context, sessionID string) *RepositoryResponse
-	//DeleteSession(ctx context.Context, sessionID string) error
+	DeleteSession(ctx context.Context, sessionID string) *RepositoryResponse
 }
 type Repository struct {
 	DBAuthenticateRepos

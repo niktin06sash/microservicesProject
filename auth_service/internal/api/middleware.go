@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 )
@@ -24,10 +23,7 @@ func (handler *Handler) NonAuthorizedMiddleware(next http.HandlerFunc) http.Hand
 		response := handler.services.Authorization(r.Context(), sessionID)
 		if response.Success {
 			stringMap := convertErrorToString(response)
-			jsonResponse := badResponse(w, stringMap, http.StatusBadRequest)
-			if jsonResponse != nil {
-				fmt.Fprint(w, string(jsonResponse))
-			}
+			badResponse(w, stringMap, http.StatusForbidden)
 			return
 		}
 		next.ServeHTTP(w, r)
