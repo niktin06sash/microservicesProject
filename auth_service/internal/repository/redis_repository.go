@@ -47,6 +47,11 @@ func (redisrepo *AuthRedis) SetSession(ctx context.Context, session model.Sessio
 	return &RepositoryResponse{Success: true, Data: responseData, Errors: nil}
 }
 
+const (
+	sessionDuration         = 24 * time.Hour
+	sessionRenewalThreshold = 0.1
+)
+
 func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *RepositoryResponse {
 	result, err := redisrepo.Client.HGetAll(ctx, sessionID).Result()
 	if err != nil {
@@ -80,6 +85,27 @@ func (redisrepo *AuthRedis) GetSession(ctx context.Context, sessionID string) *R
 		return &RepositoryResponse{Success: false, Errors: erro.ErrorSessionParse}
 	}
 
+	remainingTime := time.Until(expirationTime)
+	renewalThreshold := time.Duration(float64(sessionDuration.Seconds()) * sessionRenewalThreshold * float64(time.Second))
+	if remainingTime <= renewalThreshold {
+		log.Printf("Renewing session %s", sessionID)
+
+		newExpirationTime := time.Now().Add(sessionDuration)
+		renewalDuration := time.Until(newExpirationTime)
+
+		session := model.Session{
+			SessionID:      sessionID,
+			UserID:         userID,
+			ExpirationTime: newExpirationTime,
+		}
+		repoResponse := redisrepo.SetSession(ctx, session, renewalDuration)
+		if !repoResponse.Success {
+			log.Printf("Error renewing session in Redis: %v", repoResponse.Errors)
+			return &RepositoryResponse{Success: false, Errors: repoResponse.Errors}
+		}
+		expirationTime = newExpirationTime
+
+	}
 	responseData := &RedisRepositoryResponseData{
 		SessionId:      sessionID,
 		ExpirationTime: expirationTime,
@@ -97,12 +123,6 @@ func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string)
 	log.Printf("Session %s deleted successfully", sessionID)
 	return &RepositoryResponse{Success: true}
 }
-
-/*
-	func (redisrepo *AuthRedis) DeleteSession(ctx context.Context, sessionID string) error {
-		return nil
-	}
-*/
 func NewAuthRedis(client *redis.Client) *AuthRedis {
 	return &AuthRedis{Client: client}
 }
