@@ -29,4 +29,5 @@ var (
 	ErrorAuthorized               = errors.New("The current session is active")
 	ErrorGetUserId                = errors.New("Error getting the UserId from the request context")
 	ErrorContextTimeout           = errors.New("The timeout context has expired")
+	ErrorSendKafkaMessage         = errors.New("Error Kafka Message")
 )

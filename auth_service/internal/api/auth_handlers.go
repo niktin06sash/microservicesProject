@@ -202,7 +202,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	sessionID := cookie.Value
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
-	response := h.services.Logout(ctx, sessionID)
+	response := h.services.Logout(ctx, sessionID, userID)
 	if !response.Success {
 		stringMap := convertErrorToString(response)
 

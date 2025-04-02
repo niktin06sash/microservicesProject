@@ -1,22 +1,10 @@
 package main
 
 import (
-	"auth_service/configs"
-	"auth_service/internal/api"
-	"auth_service/internal/kafka"
-	"auth_service/internal/repository"
-	"auth_service/internal/server"
-	"auth_service/internal/service"
-	"context"
-	"fmt"
 	"log"
-	"os"
-	"os/signal"
 	"path/filepath"
 	"runtime"
-	"strings"
-	"syscall"
-	"time"
+	"statustracking_service/configs"
 
 	"github.com/spf13/viper"
 )
@@ -50,7 +38,7 @@ func main() {
 		log.Fatalf("Unable to decode into struct, %v", err)
 	}
 
-	db, dbInterface, err := repository.ConnectToDb(config)
+	/*db, dbInterface, err := repository.ConnectToDb(config)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 		return
@@ -62,17 +50,10 @@ func main() {
 		return
 	}
 	defer redisInterface.Close(rdb)
-	brokersString := config.Kafka.BootstrapServers
-	brokers := strings.Split(brokersString, ",")
-	kafkaProducer, err := kafka.NewKafkaProducer(brokers)
-	if err != nil {
-		log.Fatalf("Failed to create Kafka producer: %v", err)
-		return
-	}
-	defer kafkaProducer.Close()
+
 	repositories := repository.NewRepository(db, rdb)
 
-	service := service.NewService(repositories, kafkaProducer)
+	service := service.NewService(repositories)
 	handlers := api.NewHandler(service)
 	srv := &server.Server{}
 
@@ -112,5 +93,5 @@ func main() {
 	}
 
 	log.Println("Service has shutted down successfully")
-
+	*/
 }

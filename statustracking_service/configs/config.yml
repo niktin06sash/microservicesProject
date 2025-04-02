@@ -1,0 +1,11 @@
+server:
+  port: "8082"
+database:
+  driver: postgres
+  host: localhost
+  port: 5432
+  user: postgres
+  password: my_password
+  name: statuschecked
+  sslmode: disable
+  
